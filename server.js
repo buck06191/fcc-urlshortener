@@ -8,6 +8,17 @@ var bodyParser = require('body-parser')
 
 mongoose.connect(process.env.MONGODB_URI);
 
+var Schema = mongoose.Schema;
+
+
+var urlSchema = new Schema({
+  original_url: {type: String, required: true},
+  short_id: {type: Number, unique: true, required: true} 
+});
+
+var Url = mongoose.model('Url', urlSchema); 
+
+
 var cors = require('cors');
 
 var app = express();
@@ -32,20 +43,31 @@ app.get('/', function(req, res){
 });
 
   
-// your first API endpoint... 
-app.get("/api/hello", function (req, res) {
-  res.json({greeting: 'hello API'});
-});
-
 app.route("/api/shorturl/new").post(postHandler);
 
-function uploadToMongo(req, res, next){
-  
+function uploadToMongo(urlObject, done){
+  let countQuery = Url.estimatedDocumentCount();
+  countQuery.exec((err, urlCount) => {
+    if (err) return console.log(err);
+    
+    urlObject.short_id = urlCount + 1;
+    let url = Url(urlObject);
+    
+    url.save(function(err, data){
+      if (err) {
+        return done(err)
+      };
+      done(null, data);
+    });
+  });
 }
 
 
 function postHandler(req, res){
-  res.json({original_url: req.body.url});
+  uploadToMongo({original_url: req.body.url}, function(err, data){
+    if (err) return console.log(err);
+    res.json(data);
+  });
 }
 
 app.listen(port, function () {
