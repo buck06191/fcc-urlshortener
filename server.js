@@ -1,11 +1,11 @@
 'use strict';
 
-var express = require('express');
-var mongo = require('mongodb');
-var mongoose = require('mongoose');
-var dns = require('dns');
-var bodyParser = require('body-parser')
-
+const express = require('express');
+const mongo = require('mongodb');
+const mongoose = require('mongoose');
+const dns = require('dns');
+const bodyParser = require('body-parser')
+const { URL } = require('url');
 mongoose.connect(process.env.MONGODB_URI);
 
 var Schema = mongoose.Schema;
@@ -69,8 +69,12 @@ function uploadToMongo(urlObject, done){
 
 
 function postHandler(req, res){
-  dns.lookup(req.body.url, (err) => {
+
+  let myUrl = new URL(req.body.url);
+  let hostname = myUrl.hostname+myUrl.pathname;
+  dns.resolve(hostname.slice(0, -1), (err) => {
     if (err){
+      console.log(err);
       return res.json({"error": "invalid url"});
     }
     uploadToMongo({original_url: req.body.url}, function(err, data){
@@ -85,12 +89,15 @@ app.get("/api/shorturl/:short_url", getHandler);
 
 function getHandler(req, res){
   let short_url = req.params.short_url;
-  retrieveUrl(short_url, function (err, longUrl){
+  retrieveUrl(short_url, function (err, record){
     if (err) {
-      res.redirect('/error')
+      console.log(err);
+      return res.redirect('/error')
+    } else if (record === null ){
+      console.log("Short id not found.");
+      return res.redirect('/error')
     }
-
-    res.redirect(longUrl);
+    res.redirect(record.original_url);
 
   });
 
@@ -104,7 +111,6 @@ function retrieveUrl(short_url, done){
   done(null, data);
   });
 }
-
 
 
 app.listen(port, function () {
