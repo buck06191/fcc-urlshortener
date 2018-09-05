@@ -69,6 +69,7 @@ function uploadToMongo(urlObject, done){
 
 
 function postHandler(req, res){
+
   let myUrl = new URL(req.body.url);
   let hostname = myUrl.hostname+myUrl.pathname;
   dns.resolve(hostname.slice(0, -1), (err) => {
@@ -110,7 +111,6 @@ function retrieveUrl(short_url, done){
   done(null, data);
   });
 }
-
 
 
 app.listen(port, function () {
